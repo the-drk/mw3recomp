@@ -135,14 +135,14 @@ namespace
 
         constexpr uint32_t kLdrEntrySize = 0x64;
         constexpr uint32_t kXexHeaderBaseOffset = 0x58;
-        const uint32_t headerAddress = AllocateGuest(uint32_t(xexHeader.size()), 16);
-        const uint32_t ldrAddress = AllocateGuest(kLdrEntrySize, 16);
-        const uint32_t handleSlot = AllocateGuest(4, 4);
+        const uint32_t headerAddress = kernel::AllocateGuest(uint32_t(xexHeader.size()), 16);
+        const uint32_t ldrAddress = kernel::AllocateGuest(kLdrEntrySize, 16);
+        const uint32_t handleSlot = kernel::AllocateGuest(4, 4);
         if (!headerAddress || !ldrAddress || !handleSlot)
         {
-            if (headerAddress) FreeGuest(headerAddress);
-            if (ldrAddress) FreeGuest(ldrAddress);
-            if (handleSlot) FreeGuest(handleSlot);
+            if (headerAddress) kernel::FreeGuest(headerAddress);
+            if (ldrAddress) kernel::FreeGuest(ldrAddress);
+            if (handleSlot) kernel::FreeGuest(handleSlot);
             LOGE("XexExecutableModuleHandle: could not allocate guest module metadata");
             return;
         }
