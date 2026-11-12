@@ -93,6 +93,10 @@ int main()
                pe.data(), uint32_t(pe.size()), 0x82000000, 0x0193, matches)
            == 0x82000604);
     assert(matches == 1);
+    // A unique marker whose absolute guest address would wrap is rejected.
+    assert(kernel::xex::FindUniqueDataImportRecord(
+               pe.data(), uint32_t(pe.size()), 0xFFFFF000, 0x0193, matches) == 0);
+    assert(matches == 1);
 
     // Ambiguous matches fail closed; executable-section lookalikes are ignored.
     putBe32(0x608, 0x00010193);
