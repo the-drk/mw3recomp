@@ -1,5 +1,6 @@
 #include "runtime/kernel/xex_header.h"
 #include "runtime/kernel/xex_module_handle.h"
+#include "runtime/install/xex.h"
 
 #ifdef NDEBUG
 #undef NDEBUG
@@ -8,6 +9,8 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <string>
+#include <vector>
 
 int main()
 {
