@@ -42,11 +42,11 @@ def audit_body(body: str) -> tuple[bool, str]:
     #   lwz r3, 88(r11)       ; LDR_DATA_TABLE_ENTRY.xex_header_base (+0x58)
     #   bl RtlImageXexHeaderField
     patterns = [
-        r"ctx\\.r11\\.s64\\s*=\\s*-2113929216\\s*;",
-        r"PPC_LOAD_U32\\(ctx\\.r11\\.u32\\s*\\+\\s*2172\\)",
-        r"PPC_LOAD_U32\\(ctx\\.r11\\.u32\\s*\\+\\s*0\\)",
-        r"ctx\\.r3\\.u64\\s*=\\s*PPC_LOAD_U32\\(ctx\\.r11\\.u32\\s*\\+\\s*88\\)",
-        r"__imp__RtlImageXexHeaderField\\(ctx,\\s*base\\)\\s*;",
+        r"ctx[.]r11[.]s64[ \t]*=[ \t]*-2113929216[ \t]*;",
+        r"PPC_LOAD_U32[(]ctx[.]r11[.]u32[ \t]*[+][ \t]*2172[)]",
+        r"PPC_LOAD_U32[(]ctx[.]r11[.]u32[ \t]*[+][ \t]*0[)]",
+        r"ctx[.]r3[.]u64[ \t]*=[ \t]*PPC_LOAD_U32[(]ctx[.]r11[.]u32[ \t]*[+][ \t]*88[)]",
+        r"__imp__RtlImageXexHeaderField[(]ctx,[ \t]*base[)][ \t]*;",
     ]
     positions = []
     for pattern in patterns:
