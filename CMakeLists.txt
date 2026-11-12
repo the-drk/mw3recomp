@@ -165,7 +165,14 @@ if(MW3_RECOMP_ONLY)
     # Vulkan, FFmpeg, generated data or the title's hashes.
     file(GLOB MW3_TITLE_SOURCES CONFIGURE_DEPENDS
          "${CMAKE_SOURCE_DIR}/runtime/*.cpp")
-    add_library(mw3-runtime-compile-check OBJECT ${MW3_KERNEL_SOURCES} ${MW3_TITLE_SOURCES})
+    # Compile the changed XEX loader path too. Placeholder hashes are only
+    # needed to compile the MW2-named player-start code; this target never links.
+    set(MW3_INSTALL_SOURCES
+        "${CMAKE_SOURCE_DIR}/runtime/install/xex.cpp"
+        "${CMAKE_SOURCE_DIR}/runtime/install/install.cpp"
+        "${CMAKE_SOURCE_DIR}/runtime/install/crypto.cpp")
+    add_library(mw3-runtime-compile-check OBJECT
+        ${MW3_KERNEL_SOURCES} ${MW3_TITLE_SOURCES} ${MW3_INSTALL_SOURCES})
     target_include_directories(mw3-runtime-compile-check PRIVATE
         "${MW2_PPC_DIR}"
         "${CMAKE_SOURCE_DIR}/runtime"
@@ -173,7 +180,8 @@ if(MW3_RECOMP_ONLY)
     target_compile_options(mw3-runtime-compile-check PRIVATE
         -march=${MW2_X86_LEVEL} -fwrapv)
     target_compile_definitions(mw3-runtime-compile-check PRIVATE
-        MW3_TITLE=1 MW2_DIAGNOSTICS=0\n        MW2_XEX_SHA256_SP="compile-check" MW2_XEX_SHA256_MP="compile-check")
+        MW3_TITLE=1 MW2_DIAGNOSTICS=0
+        MW2_XEX_SHA256_SP="compile-check" MW2_XEX_SHA256_MP="compile-check")
 
     add_custom_target(mw3-recomp-check)
     add_dependencies(mw3-recomp-check ppc_recomp mw3-runtime-compile-check)
