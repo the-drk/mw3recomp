@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(CTest)
 if(BUILD_TESTING)
-    add_executable(xex-header-test tests/xex_header_test.cpp)
+    add_executable(xex-header-test tests/xex_header_test.cpp runtime/install/xex.cpp runtime/install/crypto.cpp)
     target_include_directories(xex-header-test PRIVATE "${CMAKE_SOURCE_DIR}")
     add_test(NAME xex-header-test COMMAND xex-header-test)
 endif()
@@ -173,7 +173,7 @@ if(MW3_RECOMP_ONLY)
     target_compile_options(mw3-runtime-compile-check PRIVATE
         -march=${MW2_X86_LEVEL} -fwrapv)
     target_compile_definitions(mw3-runtime-compile-check PRIVATE
-        MW3_TITLE=1 MW2_DIAGNOSTICS=0)
+        MW3_TITLE=1 MW2_DIAGNOSTICS=0\n        MW2_XEX_SHA256_SP="compile-check" MW2_XEX_SHA256_MP="compile-check")
 
     add_custom_target(mw3-recomp-check)
     add_dependencies(mw3-recomp-check ppc_recomp mw3-runtime-compile-check)
