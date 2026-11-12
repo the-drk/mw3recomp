@@ -133,6 +133,17 @@ namespace
             return;
         }
 
+        // The audited MW3 caller loads this global from 0x82000000 + 0x87C.
+        // A unique marker elsewhere is not sufficient: it would leave the
+        // actual startup pointer unresolved.
+        constexpr uint32_t kModuleHandleGlobal = PPC_IMAGE_BASE + 0x87C;
+        if (importRecord != kModuleHandleGlobal)
+        {
+            LOGW("XexExecutableModuleHandle: ordinal 0x193 is at %08X, MW3 caller reads %08X",
+                 importRecord, kModuleHandleGlobal);
+            return;
+        }
+
         constexpr uint32_t kLdrEntrySize = 0x64;
         constexpr uint32_t kXexHeaderBaseOffset = 0x58;
         const uint32_t headerAddress = kernel::AllocateGuest(uint32_t(xexHeader.size()), 16);
