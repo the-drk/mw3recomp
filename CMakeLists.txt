@@ -161,8 +161,8 @@ if(MW3_RECOMP_ONLY)
          "${CMAKE_SOURCE_DIR}/runtime/kernel/*.cpp")
     # The runtime's own sources, which name the title through runtime/title.h:
     # compiling them against MW3's block checks that every entry the code needs
-    # is there or compiled out. Not gpu/, apu/, online/ or install/, which need
-    # Vulkan, FFmpeg, generated data or the title's hashes.
+    # is there or compiled out. GPU, APU and online sources remain excluded
+    # because they need Vulkan, FFmpeg or service backends.
     file(GLOB MW3_TITLE_SOURCES CONFIGURE_DEPENDS
          "${CMAKE_SOURCE_DIR}/runtime/*.cpp")
     # Compile the changed XEX loader path too. Placeholder hashes are only
