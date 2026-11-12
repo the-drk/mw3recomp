@@ -185,6 +185,9 @@ if(MW3_RECOMP_ONLY)
 
     add_custom_target(mw3-recomp-check)
     add_dependencies(mw3-recomp-check ppc_recomp mw3-runtime-compile-check)
+    if(BUILD_TESTING)
+        add_dependencies(mw3-recomp-check xex-header-test)
+    endif()
     return()
 endif()
 
