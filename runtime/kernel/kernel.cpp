@@ -109,6 +109,104 @@ namespace
 
     std::mutex g_unimplLock;
     std::map<std::string, uint64_t> g_unimpl;
+
+    uint32_t ReadLe32(const uint8_t* p)
+    {
+        return uint32_t(p[0]) | (uint32_t(p[1]) << 8) |
+               (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
+    }
+
+    // XexExecutableModuleHandle is xboxkrnl ordinal 0x193, encoded in an
+    // unresolved image data-import slot as 0x00010193 (xboxkrnl library 1).
+    // Find it in non-executable PE sections rather than guessing a title RVA.
+    uint32_t FindExecutableModuleHandleImport(unsigned& matches)
+    {
+        matches = 0;
+        const uint8_t* image = guest::Base() + PPC_IMAGE_BASE;
+        if (std::memcmp(image, "MZ", 2) != 0) return 0;
+
+        const uint32_t pe = ReadLe32(image + 0x3C);
+        if (uint64_t(pe) + 24 > PPC_IMAGE_SIZE ||
+            std::memcmp(image + pe, "PE\\0\\0", 4) != 0)
+            return 0;
+
+        const uint16_t sections = uint16_t(image[pe + 6] | (uint16_t(image[pe + 7]) << 8));
+        const uint16_t optionalSize = uint16_t(image[pe + 20] | (uint16_t(image[pe + 21]) << 8));
+        const uint64_t table = uint64_t(pe) + 24 + optionalSize;
+        if (table + uint64_t(sections) * 40 > PPC_IMAGE_SIZE) return 0;
+
+        constexpr uint32_t kImportValue = 0x00010193;
+        uint32_t found = 0;
+        for (uint32_t i = 0; i < sections; ++i)
+        {
+            const uint8_t* section = image + table + uint64_t(i) * 40;
+            const uint32_t virtualSize = ReadLe32(section + 8);
+            const uint32_t virtualAddress = ReadLe32(section + 12);
+            const uint32_t rawSize = ReadLe32(section + 16);
+            const uint32_t characteristics = ReadLe32(section + 36);
+            if (characteristics & 0x20000000) continue; // IMAGE_SCN_MEM_EXECUTE
+
+            const uint32_t span = std::max(virtualSize, rawSize);
+            if (!span || virtualAddress >= PPC_IMAGE_SIZE ||
+                uint64_t(virtualAddress) + span > PPC_IMAGE_SIZE)
+                continue;
+
+            const uint32_t begin = (virtualAddress + 3u) & ~3u;
+            const uint32_t end = virtualAddress + span;
+            for (uint32_t at = begin; uint64_t(at) + 4 <= end; at += 4)
+            {
+                if (uint32_t(*reinterpret_cast<const be32*>(image + at)) != kImportValue)
+                    continue;
+                found = uint32_t(PPC_IMAGE_BASE) + at;
+                ++matches;
+            }
+        }
+        return matches == 1 ? found : 0;
+    }
+
+    void InstallExecutableModuleHandle(const std::vector<uint8_t>& xexHeader)
+    {
+        if (xexHeader.empty()) return; // Flat-PE development runs have no XEX metadata.
+        if (xexHeader.size() < 0x18 ||
+            std::memcmp(xexHeader.data(), "XEX2", 4) != 0 ||
+            ReadLe32(xexHeader.data() + 8) != xexHeader.size())
+        {
+            LOGW("XexExecutableModuleHandle: refusing an invalid or incomplete XEX header");
+            return;
+        }
+
+        unsigned matches = 0;
+        const uint32_t importRecord = FindExecutableModuleHandleImport(matches);
+        if (!importRecord)
+        {
+            LOGW("XexExecutableModuleHandle: expected one xboxkrnl ordinal 0x193 data import, found %u",
+                 matches);
+            return;
+        }
+
+        constexpr uint32_t kLdrEntrySize = 0x64;
+        constexpr uint32_t kXexHeaderBaseOffset = 0x58;
+        const uint32_t headerAddress = AllocateGuest(uint32_t(xexHeader.size()), 16);
+        const uint32_t ldrAddress = AllocateGuest(kLdrEntrySize, 16);
+        const uint32_t handleSlot = AllocateGuest(4, 4);
+        if (!headerAddress || !ldrAddress || !handleSlot)
+        {
+            if (headerAddress) FreeGuest(headerAddress);
+            if (ldrAddress) FreeGuest(ldrAddress);
+            if (handleSlot) FreeGuest(handleSlot);
+            LOGE("XexExecutableModuleHandle: could not allocate guest module metadata");
+            return;
+        }
+
+        std::memcpy(guest::Base() + headerAddress, xexHeader.data(), xexHeader.size());
+        std::memset(guest::Base() + ldrAddress, 0, kLdrEntrySize);
+        *GuestPtr<be32>(ldrAddress + kXexHeaderBaseOffset) = headerAddress;
+        *GuestPtr<be32>(handleSlot) = ldrAddress;
+        *GuestPtr<be32>(importRecord) = handleSlot;
+
+        LOGI("XexExecutableModuleHandle: import %08X -> handle slot %08X -> LDR %08X -> XEX header %08X (%zu bytes)",
+             importRecord, handleSlot, ldrAddress, headerAddress, xexHeader.size());
+    }
 }
 
 namespace
@@ -142,11 +240,12 @@ namespace
 
 const TlsTemplate& ImageTlsTemplate() { return g_tlsTemplate; }
 
-void kernel::Initialise(const std::filesystem::path& gameRoot)
+void kernel::Initialise(const std::filesystem::path& gameRoot, const std::vector<uint8_t>& xexHeader)
 {
     ReadTlsDirectory();
     InstallTimeStampBundle();
     InstallDebugMonitorData();
+    InstallExecutableModuleHandle(xexHeader);
     g_gameRoot = gameRoot;
     LOGI("game root: %s%s", gameRoot.string().c_str(),
          std::filesystem::exists(gameRoot) ? "" : "  (does not exist)");
