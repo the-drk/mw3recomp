@@ -32,7 +32,7 @@ namespace kernel::xex
 
         const uint32_t pe = ReadPeLe32(image + 0x3C);
         if (uint64_t(pe) + 24 > imageSize ||
-            std::memcmp(image + pe, "PE\\0\\0", 4) != 0)
+            std::memcmp(image + pe, "PE\0\0", 4) != 0)
             return 0;
 
         const uint16_t sectionCount = ReadPeLe16(image + pe + 6);
