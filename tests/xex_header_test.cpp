@@ -95,7 +95,7 @@ int main()
     assert(matches == 1);
     // A unique marker whose absolute guest address would wrap is rejected.
     assert(kernel::xex::FindUniqueDataImportRecord(
-               pe.data(), uint32_t(pe.size()), 0xFFFFF000, 0x0193, matches) == 0);
+               pe.data(), uint32_t(pe.size()), 0xFFFFFA00, 0x0193, matches) == 0);
     assert(matches == 1);
 
     // Ambiguous matches fail closed; executable-section lookalikes are ignored.
