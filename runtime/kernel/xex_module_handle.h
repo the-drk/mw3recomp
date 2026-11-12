@@ -66,8 +66,9 @@ namespace kernel::xex
                                        uint32_t(image[at + 2]) << 8 |
                                        uint32_t(image[at + 3]);
                 if (value != marker) continue;
-                found = imageBase + at;
                 ++matches;
+                if (uint64_t(imageBase) + at > 0xFFFFFFFFull) continue;
+                found = imageBase + at;
             }
         }
         return matches == 1 ? found : 0;
