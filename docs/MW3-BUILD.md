@@ -119,10 +119,12 @@ git push
 ```
 
 GitHub Free currently includes 10 GiB of LFS storage and 10 GiB of monthly
-download bandwidth; Actions downloads count against bandwidth. At about
-1.96 GB per full checkout, repeated CI builds can consume the monthly
-bandwidth quickly (roughly five full downloads, depending on actual byte
-sizes and other LFS usage). Avoid rerunning the full asset build unnecessarily.
+download bandwidth; Actions downloads count against bandwidth. The current private checkout is about 1.96 GB. Adding the next requested
+`imagefile4.pak` (about 0.95 GB) raises each full CI checkout to roughly
+2.91 GB, leaving room for only about three such downloads within the 10 GiB
+monthly allowance, before other LFS usage. Do not add the separate 1.89 GB
+`imagefile2.pak` until the title requests it. Avoid rerunning the full asset
+build unnecessarily.
 Each LFS object must also remain below the plan's 2 GB per-file limit.
 
 The private repository should contain the **extracted Xbox 360 MW3 campaign
