@@ -4,7 +4,7 @@
 
 This project adapts the [MW2-recompiled](https://github.com/PaulCombal/mw2-recompiled) runtime and tooling to bring up the MW3 single-player campaign. [XenonRecomp](https://github.com/hedge-dev/XenonRecomp) translates the Xbox 360 PowerPC executable into C++, which is then compiled for the host. This is static recompilation, not Xbox 360 emulation.
 
-> **Current milestone:** generated-code compilation, desktop runtime linking, and first-stage guest execution pass in CI. With `ui.ff` and `common.ff` supplied the title loads its startup zones, signs in a profile and submits frames, then stops on a missing required disc file (`imagefile1.pak`) with its dirty-disc error. **The main menu and gameplay have not been reached; there is no playable desktop or PS4 build.**
+> **Current milestone:** generated-code compilation, desktop runtime linking, and first-stage guest execution pass in CI. The title loads `ui.ff`, `common.ff`, `imagefile1.pak` and `imagefile3.pak`, submits 17 frames, then stops because `imagefile4.pak` and `imagefile4.pakm` are missing. **The main menu and gameplay have not been reached; there is no playable desktop or PS4 build.**
 
 ## Status
 
@@ -13,7 +13,7 @@ This project adapts the [MW2-recompiled](https://github.com/PaulCombal/mw2-recom
 | XEX analysis and static recompilation | **Working:** 142 generated C++ translation units; 128 jump tables |
 | Generated PPC compilation | **Pass:** builds `libppc_recomp.a` |
 | Runtime integration | **In progress:** diagnostic desktop executable links; MW3-specific hooks and kernel semantics still need validation |
-| First-stage execution | **Pass:** guest entry, kernel/thread/audio initialization and GPU command submission observed; loads `ui.ff` and `common.ff`, submits 17 frames, then stops on a missing `imagefile1.pak` (dirty-disc error) |
+| First-stage execution | **Pass:** guest entry, kernel/thread/audio initialization and GPU command submission observed; loads startup zones and image packs 1 and 3, submits 17 frames, then stops on missing `imagefile4.pak` / `.pakm` (dirty-disc error) |
 | Past the first fastfile load (`ui.ff`, then the rest) / main menu | **Not reached** |
 | Campaign gameplay | **Not started** |
 | PS4 build and package | **Not started** |
@@ -40,7 +40,7 @@ The GitHub Actions workflow can run the full recompile, diagnostic desktop link,
 
 ## Next milestones
 
-1. Supply the disc files the title asks for (`imagefile1.pak` next, from your own disc dump) and fix what the next failure says. A missing zone ends the run with a readable `ERROR:` line in the log; a missing required file ends it with the dirty-disc error.
+1. Supply the next requested authentic disc files (`imagefile4.pak` and `imagefile4.pakm`, if present in the dump) through the private Git LFS asset repository. Do not add the separate 1.89 GB `imagefile2.pak` until the title requests it. Then rerun the smoke test and follow the next missing-file report.
 2. Resolve MW3-specific engine hooks, globals, and runtime behavior against the supported XEX.
 3. Implement and test the imports required to progress through startup; replace diagnostic stubs only when their semantics are understood.
 4. Validate DPC scheduling and graphics-completion behavior, then resolve Vulkan/device initialization.
