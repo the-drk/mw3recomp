@@ -165,8 +165,12 @@ document) will rerun the PR workflow.
 
 The full CI build also runs `tools/genshared.py` and
 `tools/gen_kernel_stubs.py` with `MW2_TITLE=mw3` and `MW2_VERSION=tu0`,
-then runs `tools/audit_mw3_generated.py`. The audit artifact contains symbol
-names and counts only; it does not contain the XEX or generated PPC source.
+then runs the generated-code, startup, DPC and XEX-module-handle audits in the
+same job that generated the code. Generated PPC C++ and `libppc_recomp.a` stay
+on that ephemeral runner and are not uploaded as workflow artifacts. The only
+uploaded artifact, `mw3-runtime-audit-metadata`, contains sanitized symbol
+names, counts, call paths, and the import-name inventory; it contains neither
+the XEX nor generated game source or compiled game code.
 
 The report checks whether the XEX entry point recorded for this supported
 image (`0x82459E58`) appears in `ppc_func_mapping.cpp`, compares the MW3
