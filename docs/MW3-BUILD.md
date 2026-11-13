@@ -1,19 +1,21 @@
 # Building the MW3 generated-code target
 
-MW3 does not yet have a validated, title-complete runtime. Its campaign
-executable has its own entry point, globals and engine hooks; the addresses in
-`runtime/title.h` are MW2 addresses. Do not copy or guess those addresses.
+MW3 has a separate `MW3_TITLE` block in `runtime/title.h`; only entries
+verified against the supported MW3 XEX are populated there. MW2 addresses
+elsewhere in the runtime must not be reused for MW3, and several MW3 hooks and
+globals remain absent or disabled. Do not copy or guess addresses.
 
 An isolated diagnostic link probe now exists behind `MW3_LINK_PROBE=ON`.
 It links the existing host runtime with the generated MW3 PPC library and
 produces a headless `mw3` executable. This proves link compatibility only;
 it does not establish that MW3 boots or that MW2-derived kernel and graphics
 handlers have correct MW3 semantics. The CI workflow runs the linked executable against the private supported XEX.
-The first-stage guest reaches `XamLoaderLaunchTitle("default.xex")`; the
-development runner intentionally stops at that handoff rather than pretending
-to have launched the next executable. The next task is to establish which
-private title image is intended at this stage and provide a safe development
-chain-load path.
+The current smoke test loads `ui.ff`, `common.ff`, `imagefile1.pak` and
+`imagefile3.pak`, reaches 17 frames and then requests the missing
+`D:\imagefile4.pak` and `D:\imagefile4.pakm`. The title raises its dirty-disc
+error and leaves for the dashboard. The next step is to stage those authentic
+files from the matching game-root dump, if present; do not create placeholders
+or rename another asset.
 
 ## Build the current MW3 milestone
 
@@ -109,7 +111,7 @@ setup is:
 
 ```sh
 git lfs install
-git lfs track "*.ff" "*.ffm"
+git lfs track "*.ff" "*.ffm" "*.pak" "*.pakm"
 git add .gitattributes
 git add path/to/your/fastfiles/
 git commit -m "Add MW3 fastfiles with Git LFS"
@@ -126,8 +128,9 @@ Each LFS object must also remain below the plan's 2 GB per-file limit.
 The private repository should contain the **extracted Xbox 360 MW3 campaign
 game-root contents**, with the supported `default.xex` at the repository root
 and the original relative directory structure preserved. Add available
-game-root fastfiles such as `code_post_gfx.ff`, `code_post_gfx.ffm`,
-`code_post_gfx_mp.ff`, and other `.ff`/`.ffm` files. Include additional
+game-root files such as `code_post_gfx.ff`, `ui.ff`, `common.ff`,
+`imagefile1.pak`, `imagefile3.pak`, and any other original `.ff`, `.ffm`,
+`.pak` or `.pakm` files actually present in the dump. Include additional
 campaign `.xex` files only if they actually exist in your dump; none of the
 example filenames are mandatory. Do not create placeholder files or rename
 different files to imitate missing ones. Preserve the original names and
@@ -165,8 +168,12 @@ document) will rerun the PR workflow.
 
 The full CI build also runs `tools/genshared.py` and
 `tools/gen_kernel_stubs.py` with `MW2_TITLE=mw3` and `MW2_VERSION=tu0`,
-then runs `tools/audit_mw3_generated.py`. The audit artifact contains symbol
-names and counts only; it does not contain the XEX or generated PPC source.
+then runs the generated-code, startup, DPC and XEX-module-handle audits in the
+same job that generated the code. Generated PPC C++ and `libppc_recomp.a` stay
+on that ephemeral runner and are not uploaded as workflow artifacts. The only
+uploaded artifact, `mw3-runtime-audit-metadata`, contains sanitized symbol
+names, counts, call paths and the import-name inventory; it contains neither
+the XEX nor generated game source or compiled game code.
 
 The report checks whether the XEX entry point recorded for this supported
 image (`0x82459E58`) appears in `ppc_func_mapping.cpp`, compares the MW3
