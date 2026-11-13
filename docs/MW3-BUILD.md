@@ -12,7 +12,7 @@ it does not establish that MW3 boots or that MW2-derived kernel and graphics
 handlers have correct MW3 semantics. The CI workflow runs the linked executable against the private supported XEX.
 The current smoke test loads `ui.ff`, `common.ff`, `imagefile1.pak` and
 `imagefile3.pak`, reaches 17 frames and then requests the missing
-`D:\\imagefile4.pak` and `D:\\imagefile4.pakm`. The title raises its dirty-disc
+`D:\imagefile4.pak` and `D:\imagefile4.pakm`. The title raises its dirty-disc
 error and leaves for the dashboard. The next step is to stage those authentic
 files from the matching game-root dump, if present; do not create placeholders
 or rename another asset.
