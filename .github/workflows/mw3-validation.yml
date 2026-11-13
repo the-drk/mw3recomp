@@ -159,14 +159,15 @@ jobs:
           fi
           grep -F "function table:" "$log"
           grep -F "entering guest at" "$log"
+          grep -F "XamLoaderSetLaunchData:" "$log"
+          grep -F 'text "eERROR:' "$log"
           grep -F "XamLoaderLaunchTitle: default.xex" "$log"
-          grep -F "exiting: the title started its other executable" "$log"
           grep -F "the title asked for default.xex: start that build yourself" "$log"
           if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
             echo "Expected the development runner to exit normally or with its explicit handoff status; got $status"
             exit 1
           fi
-          echo "MW3 first-stage startup and explicit next-title handoff were reached."
+          echo "MW3 first-stage startup reached the title fatal-error restart path; the main menu was not reached."
 
       # Keep generated PPC source and the archive on this ephemeral runner.
       # Only the sanitized symbol/count reports and import-name inventory are uploaded.
