@@ -1,19 +1,22 @@
 # Building the MW3 generated-code target
 
-MW3 does not yet have a validated, title-complete runtime. Its campaign
-executable has its own entry point, globals and engine hooks; the addresses in
-`runtime/title.h` are MW2 addresses. Do not copy or guess those addresses.
+MW3 has a separate `MW3_TITLE` block in `runtime/title.h`; only entries
+verified against the supported MW3 XEX are populated there. MW2 addresses
+elsewhere in the runtime must not be reused for MW3, and several MW3 hooks and
+globals remain absent or disabled. Do not copy or guess addresses.
 
 An isolated diagnostic link probe now exists behind `MW3_LINK_PROBE=ON`.
 It links the existing host runtime with the generated MW3 PPC library and
 produces a headless `mw3` executable. This proves link compatibility only;
 it does not establish that MW3 boots or that MW2-derived kernel and graphics
 handlers have correct MW3 semantics. The CI workflow runs the linked executable against the private supported XEX.
-The first-stage guest reaches `XamLoaderLaunchTitle("default.xex")`; the
-development runner intentionally stops at that handoff rather than pretending
-to have launched the next executable. The next task is to establish which
-private title image is intended at this stage and provide a safe development
-chain-load path.
+The current first-stage smoke test does not reach the main menu. It reaches
+`sub_8232E638`, which formats `ERROR: Could not find zone 'ui.ff'` into launch
+data and asks to relaunch `default.xex` so the title can display the fatal
+error. The runner exits at this error restart; it is not chain-loading a
+second game executable. The next practical milestone is to stage the authentic
+`ui.ff` from the matching game-root dump and rerun the smoke test. Do not
+rename another fastfile or create a placeholder to satisfy the lookup.
 
 ## Build the current MW3 milestone
 
