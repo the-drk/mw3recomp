@@ -3,8 +3,10 @@
 This tree is a fork of [mw2-recompiled](https://github.com/PaulCombal/mw2-recompiled),
 which runs Modern Warfare 2 (2009) natively on PC. The goal here is the same
 for Modern Warfare 3 (2011), and later a PS4 build on top of it
-(see [PS4](#ps4)). Nothing below has been run against an MW3 executable yet:
-every address, every "should" and every estimate is to be checked.
+(see [PS4](#ps4)). The executable has been statically recompiled, its generated
+PPC has been compiled and linked into a diagnostic desktop runner, and CI has
+observed early guest execution. The evidence and remaining limitations are
+recorded below; addresses and inferred contracts still require validation.
 
 Scope: **the campaign, offline.** The multiplayer needs the online services,
 and Special Ops comes after the campaign boots.
@@ -169,14 +171,16 @@ repeats steps 1 and 3 from `mw3/tu0/default.xex` in about 15 seconds.
   Vulkan and SDL headers were not available. The 51 top-level sources are now
   part of `mw3-recomp-check`.
 - **Imports on the startup path** (`tools/audit_mw3_startup.py`): of 258 kernel
-  imports, 188 are reachable from the entry point; 161 of those have a runtime
-  implementation and 27 only a logging stub. The ones to implement first are
-  `RtlImageXexHeaderField` (called in the CRT startup, `sub_82462E50`), the C
-  formatters `sprintf`, `_snprintf`, `_vsnprintf` and `vswprintf` (used on the
-  `D3D_Present` path among others), `KeInitializeDpc` and `KeInsertQueueDpc`
-  (see MW3-DPC-INVESTIGATION.md), `VdSetDisplayModeOverride`, and
-  `RtlUnicodeStringToAnsiString` with `RtlFreeAnsiString`. The network, `Xam*UI`
-  and bug-check imports can stay stubs for an offline boot.
+  imports, 188 are reachable from the entry point; the latest metadata audit
+  matches 185 reachable imports to runtime handlers and leaves three reachable
+  logging stubs: `NetDll_WSACreateEvent`, `NetDll___WSAFDIsSet`, and
+  `XamShowFriendRequestUI`. The full image has 221 name matches and 37 logging
+  stubs. These are name-level counts, not semantic validation. The earlier
+  startup priorities (`RtlImageXexHeaderField`, the C formatters, the DPC pair,
+  `VdSetDisplayModeOverride`, and the ANSI conversion/free pair) now have runtime
+  implementations and focused tests, but still need live-boot validation.
+  Network and XAM UI imports remain deferred for the offline campaign unless a
+  concrete campaign path demonstrates a dependency.
 
 - **Gotcha:** XenonRecomp crashes with a null `FILE*` and no message when its
   output directory (`ppc_mw3/`) does not exist.
@@ -211,7 +215,7 @@ The shift is not uniform (+128, +276, +296), so none of these can be derived fro
 
 With `ui.ff` supplied the run passes it (the 9.9 MB zone loads and 4 shaders are used) and stops on `ERROR: Could not find zone 'common.ff'` (the 39.8 MB file was then added to the private repo through Git LFS), again through the launch-data message. The startup function `sub_8229C308` names the zones it loads: `code_post_gfx` and `common` (strings at 0x820203CC and 0x820203C4), after the `ui` zone requested earlier. So the full startup set is `code_post_gfx.ff`, `ui.ff` and `common.ff`; level zones are requested later by the level loader and are not known statically. `common_specialops` and `common_survival` also exist as strings and belong to Special Ops. `common_mp.ff`, if the dump has one, does not substitute for `common.ff`; the title builds the file name from `%s.ff`.
 
-### Past the zones: `imagefile1.pak`
+### Past the zones: image-pack progression
 
 With `common.ff` supplied (CI run 43387636948) the title loads its startup zones and runs: a profile signs in, 17 frames are submitted (802 draw packets, 4 shaders, 6041 command packets, no unknown opcodes, no refused loads, the graphics interrupt serviced every frame, audio callbacks 297, no crash). It then asks for `D:\imagefile1.pak` and `D:\imagefile1.pakm`, does not get them, raises the dirty-disc error (`XamShowDirtyDiscErrorUI`) and leaves for the dashboard (`sub_82456050`, the first of the three launch-wrapper callers above). `imagefile1.pak` is a required disc file, not an optional one like `patch.*`. The smoke test no longer asserts a particular ending; it requires the end-of-run report and prints how the run ended.
 
