@@ -39,7 +39,7 @@ python3 tools/genshared.py
 python3 tools/gen_kernel_stubs.py
 
 if [[ "${1:-}" == "--compile-only" ]]; then
-    echo "MW3 PPC compilation complete; audit phase deferred to a separate job."
+    echo "MW3 PPC compilation complete; --compile-only skips local audits (CI runs metadata audits later in the same job)."
     exit 0
 fi
 
