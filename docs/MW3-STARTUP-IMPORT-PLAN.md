@@ -6,7 +6,7 @@ Status: triage plan based on the current `mw3-bringup` source and the sanitized 
 
 Implement low-risk, independently testable RTL/C-runtime compatibility first. A provisional graphics-completion DPC dispatcher now exists, but it is not a verified Xbox scheduler implementation: keep it experimental until callback ordering, execution context, and lifetime requirements are validated. Do not replace diagnostic stubs with guessed zero-return handlers.
 
-The latest CI audit reports 258 kernel/XAM imports in the image, 201 matching existing runtime `PPC_FUNC` definitions across the full image and 57 requiring generated logging stubs. Of the 188 imports reachable through the static direct-call graph, 171 match existing runtime definitions and 17 remain logging stubs. These are name-level coverage counts, not semantic compatibility results. These are name-level coverage counts, not semantic compatibility results.
+The latest completed metadata audit reports 258 kernel/XAM imports in the image: 221 have a matching runtime `PPC_FUNC` definition and 37 are covered by generated logging stubs. Of the 188 imports reachable through the static direct-call graph, 185 match runtime definitions and exactly three remain logging stubs: `NetDll_WSACreateEvent`, `NetDll___WSAFDIsSet`, and `XamShowFriendRequestUI`. These are name-level coverage counts, not semantic compatibility results. The graph omits indirect calls, function pointers, data imports and dynamically selected entry points.
 
 ## Implementation status
 
@@ -20,7 +20,10 @@ The latest CI audit reports 258 kernel/XAM imports in the image, 201 matching ex
 - **P3** (`runtime/kernel/video.cpp`): `VdSetDisplayModeOverride` records the requested mode (1280x720 or 1920x1080 at the call site `sub_820A6690`) and returns success. The title follows it with `VdSetDisplayMode` and reads the result back through `VdGetCurrentDisplayInformation`, which already reports the host mode, so nothing is stored.
 - **P2** (`runtime/kernel/rtl_ansi.cpp`): `RtlUnicodeStringToAnsiString` and `RtlFreeAnsiString`. The only call site (`sub_824D3010`) passes `AllocateDestinationString = 1`, reads the buffer, and frees it through `RtlFreeAnsiString`, so the runtime guest heap is the matching allocator. Non-ASCII units convert to `?`.
 
-## Prioritized implementation queue
+## Original implementation priorities and current disposition
+
+The P0–P3 imports and the DPC pair listed below have since been implemented in the runtime, with focused tests for the XEX-header decoder, formatter helper and DPC queue. They remain unvalidated against a live MW3 boot. The table records the original investigation and acceptance criteria; it is not a list of still-unimplemented imports. For the offline campaign, the three remaining reachable stubs are network/UI imports and are intentionally deferred unless a concrete campaign startup path proves they are required.
+
 
 | Priority | Import(s) | Why it is in this tier | Required investigation before implementation | Acceptance tests |
 |---|---|---|---|---|
@@ -61,4 +64,4 @@ The latest CI audit reports 258 kernel/XAM imports in the image, 201 matching ex
 
 ## Important audit limitation
 
-The report's "implemented" classification is a regular-expression match for a runtime `PPC_FUNC(__imp__...)` definition. It does not inspect handler bodies, validate signatures, prove the Xbox contract, or establish that the handler works for MW3. The direct-call graph likewise does not establish runtime execution order. Treat all 161 existing matches as unverified until their semantics are exercised by the game or by suitable tests.
+The report's "implemented" classification is a regular-expression match for a runtime `PPC_FUNC(__imp__...)` definition. It does not inspect handler bodies, validate signatures, prove the Xbox contract, or establish that the handler works for MW3. The direct-call graph likewise does not establish runtime execution order. Treat all 221 name matches (185 on the direct-call reachable set) as unverified until their semantics are exercised by the game or by suitable tests.
