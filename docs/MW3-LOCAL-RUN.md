@@ -18,7 +18,9 @@ git-ignored.
 
 ## What you need
 
-- Ubuntu 24.04, or Windows with WSL2 running Ubuntu 24.04. On WSL, keep the
+- Ubuntu 24.04, or Windows with WSL running Ubuntu 24.04. WSL 1 has the
+  diagnostic limitations and experimental software-rendering workaround below.
+  On WSL, keep the
   repository and game files inside the Linux filesystem (`~/`), not under
   `/mnt/c`, which is many times slower.
 - Plenty of free disk space and RAM: the game files are about 5 GB with all four
@@ -93,7 +95,8 @@ tail -n 120 /tmp/mw3.log
 
 `MW2_RUN_SECONDS` ends the run and prints the end-of-run report after that many
 seconds. Raise it (try 60) once the title stops failing early. Without SDL there
-is no window and no sound; it submits graphics commands and counts them, and the
+is no window or audible output, but Vulkan can render private frame captures
+when a usable driver is available. The
 renderer reports `no Vulkan instance` or `no device came up` when the machine
 has no usable Vulkan driver, which does not stop the run.
 
@@ -109,8 +112,9 @@ Look for these, in this order:
    always appear.
 3. The end-of-run report: `gpu: N frames`, `N draws`, `audio: N callbacks`,
    `unimplemented imports actually reached`, and `files the guest asked for and
-   did not get`. A run that lasts the full `MW2_RUN_SECONDS` with frames and no
-   `exiting:` line has not hit any of the above.
+    did not get`. A normal bounded run reports
+    `exiting: the run deadline was reached`; distinguish that from an early
+    fatal-error exit and inspect the process exit status as well.
 
 Logs can contain private paths and guest diagnostics. Review and redact them
 before sharing; do not publish raw logs automatically.
@@ -135,8 +139,9 @@ This machine uses WSL 1 and an older AMD CPU. Configure with
 and build with `--parallel 1`. The memory backend falls back to an immediately
 unlinked temporary file only when `memfd_create` returns `ENOSYS`.
 
-The installed software Vulkan driver crashed during pipeline initialization.
-For headless diagnostics only, the following bypasses driver discovery:
+The installed Mesa software Vulkan driver crashed because its `memfd_create`
+call returned `ENOSYS`, followed by attempts to resize/map descriptor `-1`.
+For command-processing-only diagnostics, the following bypasses driver discovery:
 
 ```sh
 VK_DRIVER_FILES=/nonexistent/mw3-no-vulkan.json \
@@ -144,10 +149,36 @@ MW2_RUN_SECONDS=60 MW2_LOG_FILE=/root/mw3-headless.log \
   ./build-mw3/mw3 mw3/tu0/default.xex mw3/tu0
 ```
 
-Rendering and audio output remain unverified. The next milestone is diagnosing
-the Vulkan initialization failure and obtaining an actual rendered capture,
-not extending headless command counts indefinitely. Public builds and tests
-run in GitHub Actions; game-derived code, assets, and live runs stay local.
+### Experimental WSL 1 software-rendered startup
+
+`tools/wsl1_memfd_probe_shim.c` is an opt-in diagnostic `LD_PRELOAD` shim that
+substitutes an unlinked temporary file only on `ENOSYS`. It is not a complete
+memfd implementation, does not emulate sealing, and must not be installed as a
+system-library replacement. The asset-free Vulkan layout probe passed with it.
+
+With this shim and `LP_NUM_THREADS=1`, a bounded 60-second run produced inspected,
+non-black 1280×720 startup captures. Subsequent no-SDL scripted-input runs showed
+the Japanese brightness screen and then a screen-adjustment step with large
+horizontal arrows and an A-to-continue prompt. Earlier brightness text remained
+visible underneath the later UI: transition/clearing correctness is unresolved.
+Main-menu arrival is not verified.
+
+The slider test exited 0 at its deadline, recording 326 renderer frames, 19,468
+draws, 16 texture uploads with no failures, and 329 decoded XMA frames on three
+contexts with zero errors. No unimplemented imports were reached. These counts
+are not playable-performance evidence; audible output remains unverified.
+
+`MW2_INPUT_SCRIPT` works without SDL on this branch. For example,
+`5:start:1,12:lx+:2,16:a:1` schedules Start, left-stick movement, and A. Script
+times begin at the first input initialization/query, not necessarily process
+start. Shader compilation and slow software rendering mean scheduled times must
+not be assumed to match the displayed screen. Script-configuration log lines
+alone do not prove that a press was consumed by the title.
+
+`MW2_DUMP_FRAMES` selects a private capture directory and
+`MW2_DUMP_FRAME_EVERY` sets the sampling interval in frames. Keep captures,
+generated code, assets, and raw logs local. Public builds and synthetic tests
+run in GitHub Actions; game-dependent builds and live runs stay local.
 
 ### Earlier incomplete-data run
 

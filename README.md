@@ -67,8 +67,14 @@ Captures and raw logs remain local. A subsequent 60-second test with the no-SDL
 scripted controller and Start/A presses reached the Japanese first-run brightness
 screen, verified from captures. It exited normally and decoded 365 XMA frames on
 three contexts with zero decoding errors; audible output is still unverified.
-Button-only input did not dismiss the screen. Next: test slider movement followed
-by confirmation, then identify the next screen. This is not main-menu validation.
+The next 60-second slider/confirmation test showed brightness followed by a
+screen-adjustment step with large horizontal arrows and an A-to-continue prompt.
+Earlier brightness text remained visible underneath, so transition/clearing
+correctness is still unresolved. That run exited normally with 326 renderer
+frames, 19,468 recorded draws, 16 texture uploads with no failures, and 329 XMA
+frames decoded with no errors. No unimplemented imports were reached.
+Next: confirm the screen-adjustment step and inspect the following screen.
+This is not main-menu validation.
 
 ## Progress at a glance
 
@@ -81,7 +87,7 @@ by confirmation, then identify the next screen. This is not main-menu validation
 | Graphics command processing | Swaps, draws, shaders, interrupts and ring progress observed |
 | Actual rendering | Non-black 1280×720 startup visual captured using software Vulkan and a diagnostic WSL 1 shim |
 | Audio | 365 XMA frames decoded with zero errors in the input run; audible output unverified |
-| Startup UI / input | First-run brightness screen captured with a scripted controller; slider/confirmation behavior still to validate |
+| Startup UI / input | Brightness followed by screen adjustment captured with scripted input; overlapping UI remains unresolved |
 | Main menu / campaign / saves | Not demonstrated |
 | PS4 port and packaging | Not started |
 
