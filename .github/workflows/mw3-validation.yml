@@ -97,6 +97,49 @@ jobs:
           cmake --build build-tests --parallel 2
           ctest --test-dir build-tests --output-on-failure
 
+  public-dependencies:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install public build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang-18 ninja-build libvulkan-dev mesa-vulkan-drivers
+      - name: Probe Vulkan descriptor layout with synthetic inputs
+        run: |
+          clang++-18 -std=c++20 -march=x86-64 tools/vulkan_layout_probe.cpp -lvulkan -o /tmp/vulkan-layout-probe
+          timeout 30s /tmp/vulkan-layout-probe
+      - name: Probe software Vulkan with 128-bit vectors
+        env:
+          LP_NATIVE_VECTOR_WIDTH: "128"
+          GALLIUM_DRIVER: llvmpipe
+        run: timeout 30s /tmp/vulkan-layout-probe
+      - name: Build baseline XMA decoder without game inputs
+        run: |
+          cmake -S tools/public_dependencies -B build-public -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 \
+            -DCMAKE_C_FLAGS=-march=x86-64 -DCMAKE_CXX_FLAGS=-march=x86-64
+          cmake --build build-public --parallel 4
+      - name: Build pinned public recompiler (no game processing)
+        run: |
+          git clone --recursive https://github.com/hedge-dev/XenonRecomp.git public-recompiler
+          git -C public-recompiler checkout ddd128bcca99fe8bfbb99bea583c972351fa6ace
+          git -C public-recompiler submodule update --init --recursive
+          git -C public-recompiler apply "$GITHUB_WORKSPACE/patches/xenonrecomp-mw2.patch"
+          cmake -S public-recompiler -B build-public-recompiler -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 \
+            -DCMAKE_C_FLAGS=-march=x86-64 -DCMAKE_CXX_FLAGS=-march=x86-64
+          cmake --build build-public-recompiler --parallel 4
+      - name: Upload public decoder library
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-xma-ubuntu24-clang18-x86-64
+          path: build-public/ffmpeg-xenia/libffmpeg_xma.a
+          if-no-files-found: error
+
   relay-tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

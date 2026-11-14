@@ -13,6 +13,10 @@ if(BUILD_TESTING)
     add_executable(guest-format-test tests/guest_format_test.cpp)
     target_include_directories(guest-format-test PRIVATE "${CMAKE_SOURCE_DIR}")
     add_test(NAME guest-format-test COMMAND guest-format-test)
+    add_executable(guest-layout-test tests/guest_layout_test.cpp)
+    target_include_directories(guest-layout-test PRIVATE "${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(guest-layout-test PRIVATE MW3_TITLE=1)
+    add_test(NAME guest-layout-test COMMAND guest-layout-test)
     add_executable(dpc-queue-test tests/dpc_queue_test.cpp)
     target_include_directories(dpc-queue-test PRIVATE "${CMAKE_SOURCE_DIR}")
     find_package(Threads)
@@ -39,6 +43,11 @@ if(BUILD_TESTING)
     mw3_runtime_test(kernel_files_test runtime/kernel/files.cpp runtime/kernel/objects.cpp)
     mw3_runtime_test(kernel_dpc_test runtime/kernel/dpc.cpp runtime/kernel/objects.cpp)
     mw3_runtime_test(kernel_xam_test runtime/kernel/xam.cpp runtime/kernel/objects.cpp)
+    mw3_runtime_test(kernel_sync_test runtime/kernel/sync.cpp runtime/kernel/objects.cpp)
+    mw3_runtime_test(kernel_input_test runtime/kernel/input.cpp)
+    mw3_runtime_test(kernel_profile_test runtime/kernel/profile.cpp)
+    add_test(NAME kernel-input-scripted COMMAND kernel_input_test scripted)
+    set_tests_properties(kernel-input-scripted PROPERTIES TIMEOUT 60)
     # The PM4 command processor, fed streams built by the test, with a recording fake
     # standing in for the Vulkan renderer.
     mw3_runtime_test(gpu_command_processor_test runtime/gpu/command_processor.cpp)
@@ -331,6 +340,11 @@ if(MW2_TITLE STREQUAL "mw3")
 endif()
 target_link_libraries(mw2 PRIVATE ppc_recomp)
 target_compile_options(mw2 PRIVATE -march=${MW2_X86_LEVEL})
+if(MW2_X86_LEVEL STREQUAL "x86-64")
+    # Explicit baseline diagnostic builds use SIMDe's portable fallbacks.
+    set_property(SOURCE "${CMAKE_SOURCE_DIR}/runtime/cpu_level.cpp"
+                 APPEND PROPERTY COMPILE_DEFINITIONS MW2_BASELINE_CPU=1)
+endif()
 # The one file that must run on any x86-64 processor: it checks for the others.
 # Compiled to machine code at once, so the link-time optimiser cannot mix it
 # with code of the higher level.

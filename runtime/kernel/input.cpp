@@ -1,5 +1,5 @@
 // XamInput* -- gamepad state. Backed by SDL3 when available; otherwise reports
-// "no controller connected", which is a truthful answer the title handles.
+// "no controller connected" unless an explicit diagnostic input script is set.
 #include <ppc_recomp_shared.h>
 #include "kernel.h"
 #include "../guest.h"
@@ -16,6 +16,7 @@
 
 #ifdef MW2_USE_SDL
 #include <SDL3/SDL.h>
+#endif
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -25,7 +26,6 @@
 #include <mutex>
 #include <string>
 #include <vector>
-#endif
 
 namespace
 {
@@ -128,6 +128,7 @@ namespace
         return g_pads[user];
     }
 
+#endif
     constexpr uint16_t BTN_DPAD_UP=0x0001, BTN_DPAD_DOWN=0x0002, BTN_DPAD_LEFT=0x0004,
         BTN_DPAD_RIGHT=0x0008, BTN_START=0x0010, BTN_BACK=0x0020, BTN_LTHUMB=0x0040,
         BTN_RTHUMB=0x0080, BTN_LB=0x0100, BTN_RB=0x0200, BTN_A=0x1000, BTN_B=0x2000,
@@ -144,6 +145,7 @@ namespace
 
     // The keyboard, for when there is no controller. Only useful with the window
     // open, since that is what gives SDL a focused surface to read keys from.
+#ifdef MW2_USE_SDL
     struct Key { SDL_Scancode code; uint16_t bit; };
     constexpr Key kKeys[] = {
         { SDL_SCANCODE_RETURN, BTN_START },   { SDL_SCANCODE_ESCAPE, BTN_BACK },
@@ -166,6 +168,7 @@ namespace
         return buttons;
     }
 
+#endif
     // MW2_INPUT_SCRIPT="2.5:start,6:a" presses buttons at fixed times, so a title
     // can be driven to a screen without a hand on the controller, and a bring-up
     // run reproduces the same path twice.
@@ -297,7 +300,6 @@ namespace
     // last looked. Incrementing it every poll says "changed" sixty times a second.
     struct Latch { uint32_t packet = 0; uint16_t buttons = 0; uint8_t triggers[2]{}; int16_t axes[4]{}; };
     Latch g_latch[4];
-#endif
 }
 
 PPC_FUNC(__imp__XamInputGetState)
@@ -440,7 +442,45 @@ PPC_FUNC(__imp__XamInputGetState)
         signin::Input(user, 0);
     }
 #else
-    (void)user;
+    if (user < 4)
+    {
+        const uint16_t buttons = ScriptedButtons(user);
+        if (g_scripted[user])
+        {
+            Latch& latch = g_latch[user];
+            const bool changed = latch.buttons != buttons ||
+                std::memcmp(latch.triggers, g_scriptTriggers[user], sizeof latch.triggers) != 0 ||
+                std::memcmp(latch.axes, g_scriptAxes[user], sizeof latch.axes) != 0;
+            if (changed)
+            {
+                ++latch.packet;
+                if (diag::Flag("MW2_INPUT_TRACE"))
+                {
+                    const double elapsed = std::chrono::duration<double>(
+                        std::chrono::steady_clock::now() - g_scriptStart).count();
+                    LOGI("input: delivered controller %u at %.3f s packet %u buttons %04X triggers %u/%u axes %d/%d/%d/%d",
+                         user, elapsed, latch.packet, unsigned(buttons),
+                         unsigned(g_scriptTriggers[user][0]), unsigned(g_scriptTriggers[user][1]),
+                         int(g_scriptAxes[user][0]), int(g_scriptAxes[user][1]),
+                         int(g_scriptAxes[user][2]), int(g_scriptAxes[user][3]));
+                }
+            }
+            latch.buttons = buttons;
+            std::memcpy(latch.triggers, g_scriptTriggers[user], sizeof latch.triggers);
+            std::memcpy(latch.axes, g_scriptAxes[user], sizeof latch.axes);
+            *out = XInputState{};
+            out->packet = latch.packet;
+            out->gamepad.buttons = buttons;
+            out->gamepad.leftTrigger = latch.triggers[0];
+            out->gamepad.rightTrigger = latch.triggers[1];
+            out->gamepad.thumbLX = uint16_t(latch.axes[0]);
+            out->gamepad.thumbLY = uint16_t(latch.axes[1]);
+            out->gamepad.thumbRX = uint16_t(latch.axes[2]);
+            out->gamepad.thumbRY = uint16_t(latch.axes[3]);
+            ctx.r3.u64 = X_ERROR_SUCCESS;
+            return;
+        }
+    }
 #endif
     *out = XInputState{};
     ctx.r3.u64 = X_ERROR_DEVICE_NOT_CONNECTED;
@@ -451,8 +491,12 @@ PPC_FUNC(__imp__XamInputGetCapabilities)
     uint32_t user = ctx.r3.u32;
     auto* caps = GuestPtr<XInputCapabilities>(ctx.r5.u32);
     if (!caps) { ctx.r3.u64 = X_ERROR_DEVICE_NOT_CONNECTED; return; }
+    if (user < 4) ScriptedButtons(user); // Capabilities may be queried before state.
+    bool connected = user < 4 && g_scripted[user];
 #ifdef MW2_USE_SDL
-    if (PadFor(user) || (user < 4 && g_scripted[user]) || (user == 0 && player::Wanted()))
+    connected = connected || PadFor(user) || (user == 0 && player::Wanted());
+#endif
+    if (connected)
     {
         // What a wired 360 pad reports: every control it has at full range,
         // and both motors.
@@ -467,9 +511,6 @@ PPC_FUNC(__imp__XamInputGetCapabilities)
         ctx.r3.u64 = X_ERROR_SUCCESS;
         return;
     }
-#else
-    (void)user;
-#endif
     *caps = XInputCapabilities{};
     ctx.r3.u64 = X_ERROR_DEVICE_NOT_CONNECTED;
 }

@@ -42,7 +42,9 @@ namespace
     // the value itself at +32 or, for a byte blob, its size at +32 and where the
     // bytes are at +36.
     constexpr uint32_t kStride = 0x28;
-    constexpr uint32_t kSource = 0, kUser = 8, kId = 16, kValue = 32, kData = 36;
+    // XUSER_DATA begins at +24: a byte type, seven reserved bytes, then value.
+    // Public ABI cross-check: Xenia's kernel/xam/user_profile.h.
+    constexpr uint32_t kSource = 0, kUser = 8, kId = 16, kType = 24, kValue = 32, kData = 36;
     constexpr uint32_t kSourceTitle = 2;
 
     // The type is the top nibble of the setting id: 6 is a byte blob, and
@@ -210,6 +212,7 @@ PPC_FUNC(__imp__XamUserReadProfileSettings)
 
         const Setting& setting = it->second;
         entry[kSource / 4] = setting.source;
+        guest::Base()[address + kType] = uint8_t(TypeOf(id));
         if (TypeOf(id) == kBinary)
         {
             const uint32_t length = uint32_t(setting.bytes.size());

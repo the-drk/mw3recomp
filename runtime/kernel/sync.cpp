@@ -57,7 +57,7 @@ namespace
     {
         // A synchronization event, not signalled, its wait list empty.
         *GuestPtr<uint8_t>(cs) = 1;
-        *GuestPtr<uint8_t>(cs + 1) = uint8_t(std::min<uint32_t>((spinCount + 255) / 256, 255));
+        *GuestPtr<uint8_t>(cs + 1) = uint8_t(std::min<uint64_t>((uint64_t(spinCount) + 255) / 256, 255));
         *GuestPtr<be32>(cs + 4) = 0;
         *GuestPtr<be32>(cs + 8) = cs + 8;
         *GuestPtr<be32>(cs + 12) = cs + 8;

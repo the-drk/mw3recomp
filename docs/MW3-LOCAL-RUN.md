@@ -18,7 +18,9 @@ git-ignored.
 
 ## What you need
 
-- Ubuntu 24.04, or Windows with WSL2 running Ubuntu 24.04. On WSL, keep the
+- Ubuntu 24.04, or Windows with WSL running Ubuntu 24.04. WSL 1 has the
+  diagnostic limitations and experimental software-rendering workaround below.
+  On WSL, keep the
   repository and game files inside the Linux filesystem (`~/`), not under
   `/mnt/c`, which is many times slower.
 - Plenty of free disk space and RAM: the game files are about 5 GB with all four
@@ -93,7 +95,8 @@ tail -n 120 /tmp/mw3.log
 
 `MW2_RUN_SECONDS` ends the run and prints the end-of-run report after that many
 seconds. Raise it (try 60) once the title stops failing early. Without SDL there
-is no window and no sound; it submits graphics commands and counts them, and the
+is no window or audible output, but Vulkan can render private frame captures
+when a usable driver is available. The
 renderer reports `no Vulkan instance` or `no device came up` when the machine
 has no usable Vulkan driver, which does not stop the run.
 
@@ -109,13 +112,124 @@ Look for these, in this order:
    always appear.
 3. The end-of-run report: `gpu: N frames`, `N draws`, `audio: N callbacks`,
    `unimplemented imports actually reached`, and `files the guest asked for and
-   did not get`. A run that lasts the full `MW2_RUN_SECONDS` with frames and no
-   `exiting:` line has not hit any of the above.
+    did not get`. A normal bounded run reports
+    `exiting: the run deadline was reached`; distinguish that from an early
+    fatal-error exit and inspect the process exit status as well.
 
 Logs can contain private paths and guest diagnostics. Review and redact them
 before sharing; do not publish raw logs automatically.
 
 ## Where the run stands
+
+### WSL 1 headless validation (2026-11-14)
+
+On `bringup/sync-validation`, the supported campaign executable with the full
+local disc extraction completed bounded 12-second and 60-second runs with exit
+code 0. The 60-second run recorded 3,160 swap commands, 166,629 draw commands,
+11 shaders, and no reached unimplemented imports. Only the optional patch files
+were reported missing. These are command-processing counts, not rendered frames
+or proof of menu boot, gameplay, audible sound, or PS4 readiness.
+
+The MW3 heap now begins at `0x85000000`: the old `0x84600000` start overlapped
+the generated function lookup table and corrupted an existing BINK function's
+entry. A compile-time assertion rejects overlapping layouts.
+
+This machine uses WSL 1 and an older AMD CPU. Configure with
+`-DMW2_X86_LEVEL=x86-64 -DMW2_LTO=OFF -DMW2_PGO=OFF -DMW2_USE_SDL=OFF`
+and build with `--parallel 1`. The memory backend falls back to an immediately
+unlinked temporary file only when `memfd_create` returns `ENOSYS`.
+
+The installed Mesa software Vulkan driver crashed because its `memfd_create`
+call returned `ENOSYS`, followed by attempts to resize/map descriptor `-1`.
+For command-processing-only diagnostics, the following bypasses driver discovery:
+
+```sh
+VK_DRIVER_FILES=/nonexistent/mw3-no-vulkan.json \
+MW2_RUN_SECONDS=60 MW2_LOG_FILE=/root/mw3-headless.log \
+  ./build-mw3/mw3 mw3/tu0/default.xex mw3/tu0
+```
+
+### Experimental WSL 1 software-rendered startup
+
+`tools/wsl1_memfd_probe_shim.c` is an opt-in diagnostic `LD_PRELOAD` shim that
+substitutes an unlinked temporary file only on `ENOSYS`. It is not a complete
+memfd implementation, does not emulate sealing, and must not be installed as a
+system-library replacement. The asset-free Vulkan layout probe passed with it.
+
+With this shim and `LP_NUM_THREADS=1`, a bounded 60-second run produced inspected,
+non-black 1280×720 startup captures. Subsequent no-SDL scripted-input runs showed
+the Japanese brightness screen and then a screen-adjustment step with large
+horizontal arrows and an A-to-continue prompt. Earlier brightness text remained
+visible underneath the later UI: transition/clearing correctness is unresolved.
+Main-menu arrival is not verified.
+
+The slider test exited 0 at its deadline, recording 326 renderer frames, 19,468
+draws, 16 texture uploads with no failures, and 329 decoded XMA frames on three
+contexts with zero errors. No unimplemented imports were reached. These counts
+are not playable-performance evidence; audible output remains unverified.
+
+`MW2_INPUT_SCRIPT` works without SDL on this branch. For example,
+`5:start:1,12:lx+:2,16:a:1` schedules Start, left-stick movement, and A. Script
+times begin at the first input initialization/query, not necessarily process
+start. Shader compilation and slow software rendering mean scheduled times must
+not be assumed to match the displayed screen. Script-configuration log lines
+alone do not prove that a press was consumed by the title.
+
+A subsequent 90-second test with later A confirmations exited normally but all
+six sampled captures showed brightness setup, not the screen-adjustment view.
+Progression therefore remains inconsistent. It recorded 584 renderer frames,
+34,174 draws and 309 decoded XMA frames, with no upload/decoding errors or reached
+unimplemented imports.
+
+For the no-SDL scripted controller, `MW2_INPUT_TRACE=1` logs changed states as
+they are returned by `XamInputGetState`, including script-relative time, packet,
+buttons, triggers, and axes. This distinguishes configured events from delivered
+states (including releases); it does not prove that UI code accepted the input.
+An event whose entire interval elapses between polls is not queued or replayed.
+Keep these diagnostic logs private as well.
+
+The traced 90-second run confirmed all nine scheduled input events and their
+releases were returned to the guest (18 state changes). Left-stick X reached
+32767 and -32768, D-pad Right reached button mask `0008`, and A reached `1000`.
+Captures showed the brightness slider changing and then the screen-adjustment
+view, still with overlapping brightness UI. Later A states were delivered, but
+progression beyond that view was not demonstrated. This rules out missed event
+intervals for this run, not incorrect UI/input semantics elsewhere.
+The run exited 0 at its deadline with 458 renderer frames, 26,586 recorded draws,
+16 texture uploads with no failures, 759 decoded XMA frames with zero errors,
+and no reached unimplemented imports. Main menu and audible output remain
+unverified.
+
+### Profile ABI correction and local retest
+
+Source review found that the profile reader omitted the `XUSER_DATA` type byte
+at entry offset +24 for stored settings. The public layout in Xenia's
+`src/xenia/kernel/xam/user_profile.h` confirms that the type is a byte (binary
+is 6); the value remains at +32. The reader now populates this field. An
+asset-free test covers binary and integer round trips, payload pointers,
+reserved bytes, missing settings, and buffer sizing through the real imports.
+This is an ABI correction, not a demonstrated fix for setup confirmation.
+The overlapping UI remains unexplained; blindly changing attachment load
+operations to clear would discard legitimate contents between rendering passes.
+
+The corrected profile source was rebuilt and linked locally, then tested for
+90 seconds with the same traced input schedule. The run exited 0 and returned
+all 18 press/release state changes. Later captures still showed screen adjustment
+with overlapping brightness UI; main-menu arrival was not demonstrated. The
+log contained no `profile:` read/write messages, so this test does not establish
+that the corrected stored-setting read path was exercised. The ABI correction
+is not a demonstrated fix for the startup blocker.
+
+This retest recorded 428 renderer frames, 24,970 recorded draws, 16 texture
+uploads with no failures, and 754 decoded XMA frames with zero errors. No
+unimplemented imports were reached. Captures and raw logs remain private.
+
+`MW2_DUMP_FRAMES` selects a private capture directory and
+`MW2_DUMP_FRAME_EVERY` sets the sampling interval in frames. Keep captures,
+generated code, assets, and raw logs local. Public builds and synthetic tests
+run in GitHub Actions; game-dependent builds and live runs stay local.
+
+### Earlier incomplete-data run
 
 See [MW3-BRINGUP.md](MW3-BRINGUP.md): with `ui.ff`, `common.ff`,
 `imagefile1.pak` and `imagefile3.pak` supplied the title reaches

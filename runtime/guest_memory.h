@@ -25,7 +25,12 @@
 // recompiled code dereferences a guest pointer directly, with nothing to hook.
 namespace guest
 {
+#ifdef MW3_TITLE
+    // MW3's larger image and lookup table extend past MW2's heap start.
+    inline constexpr uint32_t kHeapBase      = 0x85000000u;
+#else
     inline constexpr uint32_t kHeapBase      = 0x84600000u;
+#endif
     inline constexpr uint32_t kHeapEnd       = 0xA0000000u;
     inline constexpr uint32_t kPhysicalBase  = 0xA0000000u;
     inline constexpr uint32_t kPhysicalEnd   = 0xC0000000u;

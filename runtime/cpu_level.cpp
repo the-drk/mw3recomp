@@ -19,6 +19,10 @@ namespace
 {
     __attribute__((constructor(101))) void CheckProcessor()
     {
+#ifdef MW2_BASELINE_CPU
+        // The entire target was explicitly compiled for baseline x86-64.
+        return;
+#else
         __builtin_cpu_init();
         if (__builtin_cpu_supports("ssse3") && __builtin_cpu_supports("sse4.1") &&
             __builtin_cpu_supports("sse4.2") && __builtin_cpu_supports("popcnt"))
@@ -31,5 +35,6 @@ namespace
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Modern Warfare 2", text, nullptr);
 #endif
         std::_Exit(1);
+#endif
     }
 }
