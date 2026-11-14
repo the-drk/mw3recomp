@@ -13,8 +13,9 @@ This is not a conventional Xbox 360 emulator.
 
 > [!IMPORTANT]
 > **Research build — status: 14 November 2026.** MW3 completes a bounded
-> **60-second headless startup run** with normal exit. Visible rendering,
-> menu boot, audible audio, and gameplay are **not verified**.
+> **60-second headless startup run** with normal exit. A separate software-Vulkan
+> run produced verified **1280×720 non-black startup captures**. Menu boot,
+> audible audio, and gameplay are **not verified**.
 > There is **no playable release, PS4 executable, or FPKG**.
 
 ## Current milestone
@@ -49,12 +50,21 @@ missing; no dirty-disc failure appeared in these runs.
 - **Asset-free validation:** runtime tests, static checks, relay tests, and public
   decoder/recompiler builds run in GitHub Actions.
 
-### Current blocker: pixels, not more command counts
+### Rendering milestone and remaining blocker
 
-The installed software Vulkan driver crashes during renderer initialization.
-Bypassing driver discovery allows the headless run to proceed. A separate,
-asset-free probe can create a Vulkan instance and discover a device; the later
-failure still needs isolation. **No actual rendered capture has been verified.**
+The installed software Vulkan driver calls `memfd_create`, which returns
+`ENOSYS` on WSL 1, then attempts to map the invalid descriptor and crashes.
+An asset-free probe reproduces this independently of MW3. An opt-in diagnostic
+shim, `tools/wsl1_memfd_probe_shim.c`, substitutes an unlinked temporary file;
+it is not a complete memfd implementation and does not emulate sealing.
+
+With that shim, a separate 60-second software-rendering run exited normally and
+produced three non-black 1280×720 captures. An inspected capture shows a green
+waveform-style startup visual, **not a verified menu**. The renderer recorded
+201 frames and 11,302 draws, with nine textures uploaded and no upload failures.
+Software rendering is slow; these results are not a playable performance claim.
+Captures and raw logs remain local. Next: establish startup progression and
+input behavior beyond this visual.
 
 ## Progress at a glance
 
@@ -65,7 +75,7 @@ failure still needs isolation. **No actual rendered capture has been verified.**
 | Guest execution | Sustained 60-second headless run, normal deadline exit |
 | Kernel / XAM | 258 imports inventoried: 224 implemented, 34 logging stubs; none of those stubs reached in the validated runs |
 | Graphics command processing | Swaps, draws, shaders, interrupts and ring progress observed |
-| Actual rendering | Blocked by local Vulkan initialization failure |
+| Actual rendering | Non-black 1280×720 startup visual captured using software Vulkan and a diagnostic WSL 1 shim |
 | Audio | Callback activity observed; audible output and XMA decoding unverified |
 | Menu / campaign / input / saves | Not demonstrated |
 | PS4 port and packaging | Not started |
@@ -140,8 +150,8 @@ d90bc8d93b7b8f6001ead8330271196a6ef7a5c2e4a9e9b63118f47d58a05912
 
 ## Roadmap
 
-1. **Rendering bring-up — next:** isolate Vulkan initialization failure and
-   obtain a real rendered capture; validate what startup screen it contains.
+1. **Startup progression — next:** investigate progression beyond the captured
+   startup visual, validate input, and check rendering correctness.
 2. **Desktop menu:** establish visual correctness, input, audio output, and
    reliable startup. Fix runtime semantics based on observed execution.
 3. **Campaign:** load the first mission; validate gameplay, saves, and performance.
