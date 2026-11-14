@@ -200,6 +200,18 @@ The run exited 0 at its deadline with 458 renderer frames, 26,586 recorded draws
 and no reached unimplemented imports. Main menu and audible output remain
 unverified.
 
+### Profile ABI correction awaiting game-dependent validation
+
+Source review found that the profile reader omitted the `XUSER_DATA` type byte
+at entry offset +24 for stored settings. The public layout in Xenia's
+`src/xenia/kernel/xam/user_profile.h` confirms that the type is a byte (binary
+is 6); the value remains at +32. The reader now populates this field. An
+asset-free test covers binary and integer round trips, payload pointers,
+reserved bytes, missing settings, and buffer sizing through the real imports.
+This is an ABI correction, not a demonstrated fix for setup confirmation.
+The overlapping UI remains unexplained; blindly changing attachment load
+operations to clear would discard legitimate contents between rendering passes.
+
 `MW2_DUMP_FRAMES` selects a private capture directory and
 `MW2_DUMP_FRAME_EVERY` sets the sampling interval in frames. Keep captures,
 generated code, assets, and raw logs local. Public builds and synthetic tests

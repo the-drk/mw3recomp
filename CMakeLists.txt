@@ -45,6 +45,7 @@ if(BUILD_TESTING)
     mw3_runtime_test(kernel_xam_test runtime/kernel/xam.cpp runtime/kernel/objects.cpp)
     mw3_runtime_test(kernel_sync_test runtime/kernel/sync.cpp runtime/kernel/objects.cpp)
     mw3_runtime_test(kernel_input_test runtime/kernel/input.cpp)
+    mw3_runtime_test(kernel_profile_test runtime/kernel/profile.cpp)
     add_test(NAME kernel-input-scripted COMMAND kernel_input_test scripted)
     set_tests_properties(kernel-input-scripted PROPERTIES TIMEOUT 60)
     # The PM4 command processor, fed streams built by the test, with a recording fake
