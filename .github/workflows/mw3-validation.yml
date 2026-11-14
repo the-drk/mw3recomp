@@ -110,6 +110,11 @@ jobs:
         run: |
           clang++-18 -std=c++20 -march=x86-64 tools/vulkan_layout_probe.cpp -lvulkan -o /tmp/vulkan-layout-probe
           timeout 30s /tmp/vulkan-layout-probe
+      - name: Probe software Vulkan with 128-bit vectors
+        env:
+          LP_NATIVE_VECTOR_WIDTH: "128"
+          GALLIUM_DRIVER: llvmpipe
+        run: timeout 30s /tmp/vulkan-layout-probe
       - name: Build baseline XMA decoder without game inputs
         run: |
           cmake -S tools/public_dependencies -B build-public -G Ninja \
