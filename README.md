@@ -83,6 +83,15 @@ renderer frames and 34,174 draws, with no texture upload or XMA decoding errors
 and no reached unimplemented imports. Longer button-only confirmation is not a
 demonstrated fix; input-delivery timing needs to be checked next.
 
+The subsequent traced 90-second test returned every scheduled press and release
+through the input import (18 state changes). Captures showed slider movement
+and the screen-adjustment view, but no verified progression beyond it despite
+later A presses. Missed script intervals do not explain this particular run.
+It exited 0 with 458 renderer frames, 26,586 recorded draws, no texture upload
+failures, 759 decoded XMA frames with zero errors, and no reached unimplemented
+imports. Next: investigate setup confirmation/UI state handling and the
+overlapping rendering, rather than assuming more button presses will fix it.
+
 ## Progress at a glance
 
 | Area | Evidence / status |

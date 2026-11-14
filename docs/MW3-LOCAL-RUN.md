@@ -188,6 +188,18 @@ states (including releases); it does not prove that UI code accepted the input.
 An event whose entire interval elapses between polls is not queued or replayed.
 Keep these diagnostic logs private as well.
 
+The traced 90-second run confirmed all nine scheduled input events and their
+releases were returned to the guest (18 state changes). Left-stick X reached
+32767 and -32768, D-pad Right reached button mask `0008`, and A reached `1000`.
+Captures showed the brightness slider changing and then the screen-adjustment
+view, still with overlapping brightness UI. Later A states were delivered, but
+progression beyond that view was not demonstrated. This rules out missed event
+intervals for this run, not incorrect UI/input semantics elsewhere.
+The run exited 0 at its deadline with 458 renderer frames, 26,586 recorded draws,
+16 texture uploads with no failures, 759 decoded XMA frames with zero errors,
+and no reached unimplemented imports. Main menu and audible output remain
+unverified.
+
 `MW2_DUMP_FRAMES` selects a private capture directory and
 `MW2_DUMP_FRAME_EVERY` sets the sampling interval in frames. Keep captures,
 generated code, assets, and raw logs local. Public builds and synthetic tests
