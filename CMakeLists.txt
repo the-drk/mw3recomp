@@ -13,6 +13,10 @@ if(BUILD_TESTING)
     add_executable(guest-format-test tests/guest_format_test.cpp)
     target_include_directories(guest-format-test PRIVATE "${CMAKE_SOURCE_DIR}")
     add_test(NAME guest-format-test COMMAND guest-format-test)
+    add_executable(guest-layout-test tests/guest_layout_test.cpp)
+    target_include_directories(guest-layout-test PRIVATE "${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(guest-layout-test PRIVATE MW3_TITLE=1)
+    add_test(NAME guest-layout-test COMMAND guest-layout-test)
     add_executable(dpc-queue-test tests/dpc_queue_test.cpp)
     target_include_directories(dpc-queue-test PRIVATE "${CMAKE_SOURCE_DIR}")
     find_package(Threads)
@@ -332,6 +336,11 @@ if(MW2_TITLE STREQUAL "mw3")
 endif()
 target_link_libraries(mw2 PRIVATE ppc_recomp)
 target_compile_options(mw2 PRIVATE -march=${MW2_X86_LEVEL})
+if(MW2_X86_LEVEL STREQUAL "x86-64")
+    # Explicit baseline diagnostic builds use SIMDe's portable fallbacks.
+    set_property(SOURCE "${CMAKE_SOURCE_DIR}/runtime/cpu_level.cpp"
+                 APPEND PROPERTY COMPILE_DEFINITIONS MW2_BASELINE_CPU=1)
+endif()
 # The one file that must run on any x86-64 processor: it checks for the others.
 # Compiled to machine code at once, so the link-time optimiser cannot mix it
 # with code of the higher level.

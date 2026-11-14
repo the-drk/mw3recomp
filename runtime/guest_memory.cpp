@@ -3,6 +3,9 @@
 #include "log.h"
 #include <ppc_config.h>
 
+static_assert(PPC_IMAGE_BASE + PPC_IMAGE_SIZE + PPC_CODE_SIZE * 2 <= guest::kHeapBase,
+              "Guest image/function table overlaps the general heap");
+
 #ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
@@ -20,6 +23,8 @@
 #  include <sys/mman.h>
 #  include <unistd.h>
 #  include <sys/syscall.h>
+#  include <cerrno>
+#  include <cstdlib>
 #endif
 
 namespace
@@ -149,7 +154,20 @@ namespace
     bool MapPhysicalAperture()
     {
         const size_t size = size_t(guest::kPhysicalEnd - guest::kPhysicalBase);
-        const int fd = int(syscall(SYS_memfd_create, "mw2-physical", 0));
+        int fd = int(syscall(SYS_memfd_create, "mw2-physical", 0));
+        // WSL 1 has shared file mappings but no memfd_create syscall.
+        // Unlink immediately: the descriptor and mappings alone own the bank.
+        if (fd < 0 && errno == ENOSYS)
+        {
+            char path[] = "/tmp/mw3-physical-XXXXXX";
+            fd = mkstemp(path);
+            if (fd >= 0 && unlink(path) != 0)
+            {
+                close(fd);
+                LOGE("could not unlink physical memory backing file");
+                return false;
+            }
+        }
         if (fd < 0) { LOGE("memfd_create failed"); return false; }
         bool ok = ftruncate(fd, off_t(size)) == 0;
         for (uint32_t window : { guest::kPhysicalBase, guest::kApertureBase })
