@@ -105,7 +105,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Install public build dependencies
-        run: sudo apt-get update && sudo apt-get install -y clang-18 ninja-build
+        run: sudo apt-get update && sudo apt-get install -y clang-18 ninja-build libvulkan-dev mesa-vulkan-drivers
+      - name: Probe Vulkan descriptor layout with synthetic inputs
+        run: |
+          clang++-18 -std=c++20 -march=x86-64 tools/vulkan_layout_probe.cpp -lvulkan -o /tmp/vulkan-layout-probe
+          timeout 30s /tmp/vulkan-layout-probe
       - name: Build baseline XMA decoder without game inputs
         run: |
           cmake -S tools/public_dependencies -B build-public -G Ninja \
