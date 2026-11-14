@@ -117,6 +117,40 @@ before sharing; do not publish raw logs automatically.
 
 ## Where the run stands
 
+### WSL 1 headless validation (2026-11-14)
+
+On `bringup/sync-validation`, the supported campaign executable with the full
+local disc extraction completed bounded 12-second and 60-second runs with exit
+code 0. The 60-second run recorded 3,160 swap commands, 166,629 draw commands,
+11 shaders, and no reached unimplemented imports. Only the optional patch files
+were reported missing. These are command-processing counts, not rendered frames
+or proof of menu boot, gameplay, audible sound, or PS4 readiness.
+
+The MW3 heap now begins at `0x85000000`: the old `0x84600000` start overlapped
+the generated function lookup table and corrupted an existing BINK function's
+entry. A compile-time assertion rejects overlapping layouts.
+
+This machine uses WSL 1 and an older AMD CPU. Configure with
+`-DMW2_X86_LEVEL=x86-64 -DMW2_LTO=OFF -DMW2_PGO=OFF -DMW2_USE_SDL=OFF`
+and build with `--parallel 1`. The memory backend falls back to an immediately
+unlinked temporary file only when `memfd_create` returns `ENOSYS`.
+
+The installed software Vulkan driver crashed during pipeline initialization.
+For headless diagnostics only, the following bypasses driver discovery:
+
+```sh
+VK_DRIVER_FILES=/nonexistent/mw3-no-vulkan.json \
+MW2_RUN_SECONDS=60 MW2_LOG_FILE=/root/mw3-headless.log \
+  ./build-mw3/mw3 mw3/tu0/default.xex mw3/tu0
+```
+
+Rendering and audio output remain unverified. The next milestone is diagnosing
+the Vulkan initialization failure and obtaining an actual rendered capture,
+not extending headless command counts indefinitely. Public builds and tests
+run in GitHub Actions; game-derived code, assets, and live runs stay local.
+
+### Earlier incomplete-data run
+
 See [MW3-BRINGUP.md](MW3-BRINGUP.md): with `ui.ff`, `common.ff`,
 `imagefile1.pak` and `imagefile3.pak` supplied the title reaches
 `imagefile4.pak`, submitting 17 GPU swaps before the dirty-disc error.
