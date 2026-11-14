@@ -175,6 +175,19 @@ start. Shader compilation and slow software rendering mean scheduled times must
 not be assumed to match the displayed screen. Script-configuration log lines
 alone do not prove that a press was consumed by the title.
 
+A subsequent 90-second test with later A confirmations exited normally but all
+six sampled captures showed brightness setup, not the screen-adjustment view.
+Progression therefore remains inconsistent. It recorded 584 renderer frames,
+34,174 draws and 309 decoded XMA frames, with no upload/decoding errors or reached
+unimplemented imports.
+
+For the no-SDL scripted controller, `MW2_INPUT_TRACE=1` logs changed states as
+they are returned by `XamInputGetState`, including script-relative time, packet,
+buttons, triggers, and axes. This distinguishes configured events from delivered
+states (including releases); it does not prove that UI code accepted the input.
+An event whose entire interval elapses between polls is not queued or replayed.
+Keep these diagnostic logs private as well.
+
 `MW2_DUMP_FRAMES` selects a private capture directory and
 `MW2_DUMP_FRAME_EVERY` sets the sampling interval in frames. Keep captures,
 generated code, assets, and raw logs local. Public builds and synthetic tests

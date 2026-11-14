@@ -451,7 +451,20 @@ PPC_FUNC(__imp__XamInputGetState)
             const bool changed = latch.buttons != buttons ||
                 std::memcmp(latch.triggers, g_scriptTriggers[user], sizeof latch.triggers) != 0 ||
                 std::memcmp(latch.axes, g_scriptAxes[user], sizeof latch.axes) != 0;
-            if (changed) ++latch.packet;
+            if (changed)
+            {
+                ++latch.packet;
+                if (diag::Flag("MW2_INPUT_TRACE"))
+                {
+                    const double elapsed = std::chrono::duration<double>(
+                        std::chrono::steady_clock::now() - g_scriptStart).count();
+                    LOGI("input: delivered controller %u at %.3f s packet %u buttons %04X triggers %u/%u axes %d/%d/%d/%d",
+                         user, elapsed, latch.packet, unsigned(buttons),
+                         unsigned(g_scriptTriggers[user][0]), unsigned(g_scriptTriggers[user][1]),
+                         int(g_scriptAxes[user][0]), int(g_scriptAxes[user][1]),
+                         int(g_scriptAxes[user][2]), int(g_scriptAxes[user][3]));
+                }
+            }
             latch.buttons = buttons;
             std::memcpy(latch.triggers, g_scriptTriggers[user], sizeof latch.triggers);
             std::memcpy(latch.axes, g_scriptAxes[user], sizeof latch.axes);

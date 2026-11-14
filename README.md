@@ -76,6 +76,13 @@ frames decoded with no errors. No unimplemented imports were reached.
 Next: confirm the screen-adjustment step and inspect the following screen.
 This is not main-menu validation.
 
+A later 90-second run with additional A confirmations exited normally, but all
+six sampled captures still showed brightness setup. It did not reproduce the
+screen-adjustment view: progression is not reliable yet. That run recorded 584
+renderer frames and 34,174 draws, with no texture upload or XMA decoding errors
+and no reached unimplemented imports. Longer button-only confirmation is not a
+demonstrated fix; input-delivery timing needs to be checked next.
+
 ## Progress at a glance
 
 | Area | Evidence / status |

@@ -19,6 +19,9 @@ int main(int argc, char** argv)
 {
     // Separate CTest processes isolate the once-only script configuration.
     const bool scripted = argc > 1 && std::strcmp(argv[1], "scripted") == 0;
+    // Exercise opt-in delivery diagnostics through the real import as well.
+    if (scripted) setenv("MW2_INPUT_TRACE", "1", 1);
+    else unsetenv("MW2_INPUT_TRACE");
     if (scripted)
         setenv("MW2_INPUT_SCRIPT", "0:start:3600,0:lt:3600,0:lx-:3600,0:a@2:3600", 1);
     else
