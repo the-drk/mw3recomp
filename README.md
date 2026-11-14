@@ -14,7 +14,7 @@ This is not a conventional Xbox 360 emulator.
 > [!IMPORTANT]
 > **Research build — status: 14 November 2026.** MW3 completes a bounded
 > **60-second headless startup run** with normal exit. A separate software-Vulkan
-> run produced verified **1280×720 non-black startup captures**. Menu boot,
+> run produced verified **1280×720 startup and first-run brightness-screen captures**. Main-menu boot,
 > audible audio, and gameplay are **not verified**.
 > There is **no playable release, PS4 executable, or FPKG**.
 
@@ -63,8 +63,12 @@ produced three non-black 1280×720 captures. An inspected capture shows a green
 waveform-style startup visual, **not a verified menu**. The renderer recorded
 201 frames and 11,302 draws, with nine textures uploaded and no upload failures.
 Software rendering is slow; these results are not a playable performance claim.
-Captures and raw logs remain local. Next: establish startup progression and
-input behavior beyond this visual.
+Captures and raw logs remain local. A subsequent 60-second test with the no-SDL
+scripted controller and Start/A presses reached the Japanese first-run brightness
+screen, verified from captures. It exited normally and decoded 365 XMA frames on
+three contexts with zero decoding errors; audible output is still unverified.
+Button-only input did not dismiss the screen. Next: test slider movement followed
+by confirmation, then identify the next screen. This is not main-menu validation.
 
 ## Progress at a glance
 
@@ -76,8 +80,9 @@ input behavior beyond this visual.
 | Kernel / XAM | 258 imports inventoried: 224 implemented, 34 logging stubs; none of those stubs reached in the validated runs |
 | Graphics command processing | Swaps, draws, shaders, interrupts and ring progress observed |
 | Actual rendering | Non-black 1280×720 startup visual captured using software Vulkan and a diagnostic WSL 1 shim |
-| Audio | Callback activity observed; audible output and XMA decoding unverified |
-| Menu / campaign / input / saves | Not demonstrated |
+| Audio | 365 XMA frames decoded with zero errors in the input run; audible output unverified |
+| Startup UI / input | First-run brightness screen captured with a scripted controller; slider/confirmation behavior still to validate |
+| Main menu / campaign / saves | Not demonstrated |
 | PS4 port and packaging | Not started |
 
 Import counts are name-level inventory, **not proof of correct semantics**.
