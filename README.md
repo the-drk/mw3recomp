@@ -105,7 +105,7 @@ files and LFS rules in CI; its `--staged` mode is available for pre-commit check
 ### Public checks → GitHub Actions
 
 The [validation workflow](.github/workflows/mw3-validation.yml) runs static
-checks, **13 asset-free tests**, relay tests, and public XMA decoder and pinned
+checks, asset-free runtime tests, relay tests, and public XMA decoder and pinned
 XenonRecomp builds. Use Actions for independent public work rather than making a
 low-powered development machine repeat every build.
 
