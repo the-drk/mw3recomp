@@ -200,7 +200,7 @@ The run exited 0 at its deadline with 458 renderer frames, 26,586 recorded draws
 and no reached unimplemented imports. Main menu and audible output remain
 unverified.
 
-### Profile ABI correction awaiting game-dependent validation
+### Profile ABI correction and local retest
 
 Source review found that the profile reader omitted the `XUSER_DATA` type byte
 at entry offset +24 for stored settings. The public layout in Xenia's
@@ -211,6 +211,18 @@ reserved bytes, missing settings, and buffer sizing through the real imports.
 This is an ABI correction, not a demonstrated fix for setup confirmation.
 The overlapping UI remains unexplained; blindly changing attachment load
 operations to clear would discard legitimate contents between rendering passes.
+
+The corrected profile source was rebuilt and linked locally, then tested for
+90 seconds with the same traced input schedule. The run exited 0 and returned
+all 18 press/release state changes. Later captures still showed screen adjustment
+with overlapping brightness UI; main-menu arrival was not demonstrated. The
+log contained no `profile:` read/write messages, so this test does not establish
+that the corrected stored-setting read path was exercised. The ABI correction
+is not a demonstrated fix for the startup blocker.
+
+This retest recorded 428 renderer frames, 24,970 recorded draws, 16 texture
+uploads with no failures, and 754 decoded XMA frames with zero errors. No
+unimplemented imports were reached. Captures and raw logs remain private.
 
 `MW2_DUMP_FRAMES` selects a private capture directory and
 `MW2_DUMP_FRAME_EVERY` sets the sampling interval in frames. Keep captures,

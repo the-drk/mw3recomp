@@ -92,6 +92,13 @@ failures, 759 decoded XMA frames with zero errors, and no reached unimplemented
 imports. Next: investigate setup confirmation/UI state handling and the
 overlapping rendering, rather than assuming more button presses will fix it.
 
+A profile-read ABI correction (the missing stored-setting data-type byte) passed
+synthetic tests and was rebuilt locally. The same 90-second input schedule still
+ended at screen adjustment with overlapping UI, despite all 18 input state
+changes being delivered. No profile read/write messages appeared, so exercising
+the corrected stored-setting path is not established. This did not demonstrate
+a fix for setup progression; main-menu arrival remains unverified.
+
 ## Progress at a glance
 
 | Area | Evidence / status |
