@@ -26,6 +26,8 @@ mw3_candidates.h
 
 # ---- build artifacts ----
 build/
+build-tests/
+build-mw3*/
 build-release/
 build-win*/
 out/
